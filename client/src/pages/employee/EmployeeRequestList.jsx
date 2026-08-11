@@ -1,22 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Select, Button, Table, Spin, Empty, App } from 'antd';
+import { useTranslation } from 'react-i18next';
 import Layout from '../../components/Layout';
 import StatusTag from '../../components/StatusTag';
 import Pagination from '../../components/Pagination';
-import ConfirmDialog from '../../components/ConfirmDialog';
+
 import { useToast } from '../../components/Toast';
 import { requestApi } from '../../api/request';
 import { STATUS_OPTIONS } from '../../constants/requestStatus';
-import { ERROR_MESSAGES } from '../../constants/errorCodes';
+import { displayText, formatDate, formatDateTime, formatCurrency } from '../../utils/displayMapping.js';
 
 export default function EmployeeRequestList() {
   const [data, setData] = useState({ list: [], total: 0, page: 1, pageSize: 100 });
   const [status, setStatus] = useState('全部');
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [withdrawId, setWithdrawId] = useState(null);
+
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const toast = useToast();
+  const { modal } = App.useApp();
 
   const fetchData = async () => {
     setLoading(true);
@@ -24,7 +28,7 @@ export default function EmployeeRequestList() {
       const res = await requestApi.listMyRequests({ status, page, pageSize: 100 });
       setData(res.data);
     } catch (err) {
-      toast.show(ERROR_MESSAGES[err.code] || err.message || '加载失败');
+      toast.show(t(`errors:${err.code}`) || err.message || t('common:loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -32,66 +36,72 @@ export default function EmployeeRequestList() {
 
   useEffect(() => { fetchData(); }, [status, page]);
 
-  const handleWithdraw = async () => {
+  const handleWithdraw = async (id) => {
     try {
-      await requestApi.withdrawRequest(withdrawId);
-      toast.show('撤回成功', 'success');
-      setWithdrawId(null);
+      await requestApi.withdrawRequest(id);
+      toast.show(t('myRequests:withdrawSuccess'), 'success');
+
       fetchData();
     } catch (err) {
-      toast.show(ERROR_MESSAGES[err.code] || err.message || '撤回失败');
+      toast.show(t(`errors:${err.code}`) || err.message || t('myRequests:withdrawFailed'));
     }
   };
 
+  const showWithdrawConfirm = (id) => {
+    modal.confirm({
+      title: t('modal:withdrawTitle'),
+      content: t('modal:withdrawMessage'),
+      okText: t('modal:confirmOk'),
+      cancelText: t('modal:cancel'),
+      onOk: () => handleWithdraw(id),
+    });
+  };
+
+  const columns = [
+    { title: t('table:columns.destination'), dataIndex: 'destination', key: 'destination' },
+    { title: t('table:columns.startDate'), dataIndex: 'startDate', key: 'startDate', render: v => formatDate(v) },
+    { title: t('table:columns.endDate'), dataIndex: 'endDate', key: 'endDate', render: v => formatDate(v) },
+    { title: t('table:columns.transport'), dataIndex: 'transport', key: 'transport', render: v => displayText(v) },
+    { title: t('table:columns.estimatedCost'), dataIndex: 'estimatedCost', key: 'estimatedCost', render: v => `¥${formatCurrency(v)}` },
+    { title: t('table:columns.status'), dataIndex: 'status', key: 'status', render: v => <StatusTag status={v} /> },
+    { title: t('table:columns.submittedAt'), dataIndex: 'submittedAt', key: 'submittedAt', render: v => formatDateTime(v) },
+    {
+      title: t('table:columns.operator'),
+      key: 'operator',
+      width: 220,
+      render: (_, r) => (
+        <>
+          <Button type="link" size="small" onClick={() => navigate(`/employee/requests/${r.id}`)}>{t('table:actions.detail')}</Button>
+          {r.status === '待审核' && <Button type="link" size="small" danger onClick={() => showWithdrawConfirm(r.id)}>{t('table:actions.withdraw')}</Button>}
+          {r.status === '已拒绝' && <Button type="link" size="small" onClick={() => navigate(`/employee/requests/${r.id}/resubmit`)}>{t('table:actions.resubmit')}</Button>}
+        </>
+      ),
+    },
+  ];
+
   return (
-    <Layout
-      title="我的差旅申请"
-      navItems={[{ path: '/employee/requests', label: '我的申请' }, { path: '/employee/requests/new', label: '新建申请' }]}
-    >
-      <div style={{ marginBottom: '16px', display: 'flex', gap: '8px', alignItems: 'center' }}>
-        <span style={{ fontSize: '14px' }}>状态筛选：</span>
-        <select value={status} onChange={e => { setStatus(e.target.value); setPage(1); }} style={{ padding: '4px 8px', border: '1px solid #d9d9d9', borderRadius: '4px', fontSize: '14px' }}>
-          {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
-        <button onClick={() => navigate('/employee/requests/new')} style={{ marginLeft: 'auto', padding: '6px 16px', border: 'none', borderRadius: '4px', backgroundColor: '#1677ff', color: '#fff', cursor: 'pointer', fontSize: '14px' }}>新建申请</button>
+    <Layout title={t('myRequests:pageTitle')}>
+      <div style={{ marginBottom: 16, display: 'flex', gap: 8, alignItems: 'center' }}>
+        <span>{t('common:statusFilter')}：</span>
+        <Select
+          style={{ width: 160 }}
+          value={status}
+          onChange={v => { setStatus(v); setPage(1); }}
+          options={STATUS_OPTIONS.map(s => ({ value: s, label: s === '全部' ? t('common:all') : displayText(s) }))}
+        />
+        <Button type="primary" style={{ marginLeft: 'auto' }} onClick={() => navigate('/employee/requests/new')}>{t('myRequests:createNew')}</Button>
       </div>
 
-      <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: '#fff', borderRadius: '4px', overflow: 'hidden' }}>
-        <thead>
-          <tr style={{ backgroundColor: '#fafafa', borderBottom: '1px solid #e8e8e8' }}>
-            <th style={{ padding: '12px', textAlign: 'left', fontSize: '13px' }}>目的地</th>
-            <th style={{ padding: '12px', textAlign: 'left', fontSize: '13px' }}>出发日期</th>
-            <th style={{ padding: '12px', textAlign: 'left', fontSize: '13px' }}>返回日期</th>
-            <th style={{ padding: '12px', textAlign: 'left', fontSize: '13px' }}>交通工具</th>
-            <th style={{ padding: '12px', textAlign: 'left', fontSize: '13px' }}>预计费用</th>
-            <th style={{ padding: '12px', textAlign: 'left', fontSize: '13px' }}>状态</th>
-            <th style={{ padding: '12px', textAlign: 'left', fontSize: '13px' }}>提交时间</th>
-            <th style={{ padding: '12px', textAlign: 'center', fontSize: '13px' }}>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.list.map(r => (
-            <tr key={r.id} style={{ borderBottom: '1px solid #e8e8e8' }}>
-              <td style={{ padding: '12px', fontSize: '13px' }}>{r.destination}</td>
-              <td style={{ padding: '12px', fontSize: '13px' }}>{r.startDate?.slice(0, 10)}</td>
-              <td style={{ padding: '12px', fontSize: '13px' }}>{r.endDate?.slice(0, 10)}</td>
-              <td style={{ padding: '12px', fontSize: '13px' }}>{r.transport}</td>
-              <td style={{ padding: '12px', fontSize: '13px' }}>¥{r.estimatedCost}</td>
-              <td style={{ padding: '12px' }}><StatusTag status={r.status} /></td>
-              <td style={{ padding: '12px', fontSize: '13px' }}>{r.submittedAt?.slice(0, 19).replace('T', ' ')}</td>
-              <td style={{ padding: '12px', textAlign: 'center', fontSize: '13px' }}>
-                <button onClick={() => navigate(`/employee/requests/${r.id}`)} style={{ padding: '2px 8px', border: '1px solid #1677ff', borderRadius: '4px', background: '#fff', color: '#1677ff', cursor: 'pointer', fontSize: '12px', marginRight: '4px' }}>详情</button>
-                {r.status === '待审核' && <button onClick={() => setWithdrawId(r.id)} style={{ padding: '2px 8px', border: '1px solid #f5222d', borderRadius: '4px', background: '#fff', color: '#f5222d', cursor: 'pointer', fontSize: '12px' }}>撤回</button>}
-                {r.status === '已拒绝' && <button onClick={() => navigate(`/employee/requests/${r.id}/resubmit`)} style={{ padding: '2px 8px', border: '1px solid #52c41a', borderRadius: '4px', background: '#fff', color: '#52c41a', cursor: 'pointer', fontSize: '12px' }}>重新提交</button>}
-              </td>
-            </tr>
-          ))}
-          {data.list.length === 0 && <tr><td colSpan={8} style={{ padding: '24px', textAlign: 'center', color: '#999', fontSize: '14px' }}>暂无数据</td></tr>}
-        </tbody>
-      </table>
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 48 }}><Spin /></div>
+      ) : data.list.length === 0 ? (
+        <Empty description={t('common:noData')} />
+      ) : (
+        <Table rowKey="id" columns={columns} dataSource={data.list} pagination={false} />
+      )}
 
       <Pagination page={data.page} pageSize={data.pageSize} total={data.total} onChange={setPage} />
-      <ConfirmDialog open={!!withdrawId} title="确认撤回" message="撤回后不可恢复，确定要撤回此申请吗？" onConfirm={handleWithdraw} onCancel={() => setWithdrawId(null)} />
+
     </Layout>
   );
 }
