@@ -1,10 +1,11 @@
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const config = require('../config');
 const BusinessError = require('../errors/BusinessError');
 const errorCodes = require('../constants/errorCodes');
 
 function sign(payload) {
-  return jwt.sign(payload, config.JWT_SECRET, { expiresIn: config.JWT_EXPIRES_IN });
+  return jwt.sign({ ...payload, jti: crypto.randomUUID() }, config.JWT_SECRET, { expiresIn: config.JWT_EXPIRES_IN });
 }
 
 function verify(token) {

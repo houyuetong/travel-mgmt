@@ -27,14 +27,9 @@ async function createUser(operator, { username, name, password }) {
     throw new BusinessError(errorCodes.VALIDATION_ERROR, '密码长度至少6位', 400);
   }
 
-  const existing = userRepository.findByUsername(username);
-  if (existing) {
-    throw new BusinessError(errorCodes.USER_NAME_CONFLICT, '用户名已存在', 409);
-  }
-
   const passwordHash = await bcryptUtil.hash(password);
   const now = new Date().toISOString();
-  const user = await userRepository.create({
+  const user = await userRepository.createIfUsernameFree({
     username,
     name,
     passwordHash,
@@ -70,10 +65,6 @@ async function updateUser(operator, id, { username, name, status }) {
     if (!/^[A-Za-z0-9_]{3,20}$/.test(username)) {
       throw new BusinessError(errorCodes.VALIDATION_ERROR, '用户名需为3-20位字母、数字或下划线', 400);
     }
-    const existing = userRepository.findByUsername(username);
-    if (existing && existing.id !== id) {
-      throw new BusinessError(errorCodes.USER_NAME_CONFLICT, '用户名已存在', 409);
-    }
     updates.username = username;
   }
   if (name !== undefined) {
@@ -89,7 +80,10 @@ async function updateUser(operator, id, { username, name, status }) {
     updates.status = status;
   }
 
-  const updated = await userRepository.update(id, updates);
+  const updated = await userRepository.updateIfUsernameFree(id, updates);
+  if (!updated) {
+    throw new BusinessError(errorCodes.USER_NOT_FOUND, '用户不存在', 404);
+  }
 
   await auditService.record({
     operatorUsername: operator.username,

@@ -19,7 +19,7 @@ test.describe('管理员审核 E2E 测试', () => {
 
   test('通过待审核申请成功且状态变已通过', async () => {
     const ctx = await loginAs(ADMIN.username, ADMIN.password);
-    const username = `approve_${Date.now()}`;
+    const username = `apv_${Date.now()}`;
     await createEmployee(ctx, username, '通过测试', 'pass123456');
     const empCtx = await loginAs(username, 'pass123456');
     const submitRes = await submitRequest(empCtx, sampleRequest);
@@ -31,7 +31,7 @@ test.describe('管理员审核 E2E 测试', () => {
 
   test('通过时审核意见可选', async () => {
     const ctx = await loginAs(ADMIN.username, ADMIN.password);
-    const username = `approve2_${Date.now()}`;
+    const username = `apv2_${Date.now()}`;
     await createEmployee(ctx, username, '通过无意见', 'pass123456');
     const empCtx = await loginAs(username, 'pass123456');
     const submitRes = await submitRequest(empCtx, sampleRequest);
@@ -54,7 +54,7 @@ test.describe('管理员审核 E2E 测试', () => {
 
   test('拒绝未填意见返回 VALIDATION_ERROR', async () => {
     const ctx = await loginAs(ADMIN.username, ADMIN.password);
-    const username = `reject2_${Date.now()}`;
+    const username = `rjt2_${Date.now()}`;
     await createEmployee(ctx, username, '拒绝无意见', 'pass123456');
     const empCtx = await loginAs(username, 'pass123456');
     const submitRes = await submitRequest(empCtx, sampleRequest);
@@ -66,7 +66,7 @@ test.describe('管理员审核 E2E 测试', () => {
 
   test('审核非待审核申请返回 STATE_CONFLICT', async () => {
     const ctx = await loginAs(ADMIN.username, ADMIN.password);
-    const username = `conflict_${Date.now()}`;
+    const username = `cflt_${Date.now()}`;
     await createEmployee(ctx, username, '冲突测试', 'pass123456');
     const empCtx = await loginAs(username, 'pass123456');
     const submitRes = await submitRequest(empCtx, sampleRequest);

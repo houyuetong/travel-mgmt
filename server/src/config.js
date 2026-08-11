@@ -1,6 +1,7 @@
 const path = require('path');
 
 const config = {
+  NODE_ENV: process.env.NODE_ENV,
   PORT: process.env.PORT || 3001,
   INIT_ADMIN_USERNAME: process.env.INIT_ADMIN_USERNAME,
   INIT_ADMIN_PASSWORD: process.env.INIT_ADMIN_PASSWORD,

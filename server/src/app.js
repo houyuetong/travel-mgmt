@@ -6,21 +6,21 @@ const path = require('path');
 const config = require('./config');
 const store = require('./store/JsonStoreEngine');
 const { initAdmin } = require('./init/initAdmin');
+const blacklistRepository = require('./repositories/blacklistRepository');
+const { assertJwtSecretStrength } = require('./utils/secretValidator');
 const requestLogger = require('./middlewares/logger');
 const errorHandler = require('./middlewares/errorHandler');
 const authRoutes = require('./routes/auth');
 const requestRoutes = require('./routes/request');
 const adminRoutes = require('./routes/admin');
 const logger = require('./utils/logger');
-const BusinessError = require('./errors/BusinessError');
-const errorCodes = require('./constants/errorCodes');
+
 
 async function startServer() {
-  if (!config.JWT_SECRET) {
-    throw new BusinessError(errorCodes.INIT_CONFIG_MISSING, 'JWT_SECRET 配置缺失', 500);
-  }
+  assertJwtSecretStrength(config.JWT_SECRET, config.NODE_ENV);
 
   store.init();
+  await blacklistRepository.cleanupExpired();
   await initAdmin();
 
   const app = express();
@@ -50,6 +50,6 @@ async function startServer() {
 }
 
 startServer().catch(err => {
-  logger.error('APP', 'Failed to start server', { error: err.message, stack: err.stack });
+  logger.error('APP', 'Failed to start server', { error: err.message, errorCode: err.errorCode, stack: err.stack });
   process.exit(1);
 });

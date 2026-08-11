@@ -27,6 +27,8 @@ async function login(username, password) {
 
   const token = jwtUtil.sign({ userId: user.id, username: user.username, role: user.role });
 
+  await blacklistRepository.cleanupExpired();
+
   return {
     token,
     user: { id: user.id, username: user.username, name: user.name, role: user.role, status: user.status },
@@ -38,6 +40,7 @@ async function logout(token) {
   if (decoded && decoded.exp) {
     await blacklistRepository.add(token, new Date(decoded.exp * 1000).toISOString());
   }
+  await blacklistRepository.cleanupExpired();
   return { success: true };
 }
 

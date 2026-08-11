@@ -30,7 +30,7 @@ test.describe('员工侧申请管理 E2E 测试', () => {
 
   test('撤回待审核申请成功', async () => {
     const ctx = await loginAs(ADMIN.username, ADMIN.password);
-    const username = `withdraw_${Date.now()}`;
+    const username = `wd_${Date.now()}`;
     await createEmployee(ctx, username, '撤回测试', 'pass123456');
     const empCtx = await loginAs(username, 'pass123456');
     const submitRes = await submitRequest(empCtx, sampleRequest);
@@ -42,7 +42,7 @@ test.describe('员工侧申请管理 E2E 测试', () => {
 
   test('撤回非待审核申请返回 STATE_CONFLICT', async () => {
     const ctx = await loginAs(ADMIN.username, ADMIN.password);
-    const username = `withdraw2_${Date.now()}`;
+    const username = `wd2_${Date.now()}`;
     await createEmployee(ctx, username, '撤回冲突', 'pass123456');
     const empCtx = await loginAs(username, 'pass123456');
     const submitRes = await submitRequest(empCtx, sampleRequest);
