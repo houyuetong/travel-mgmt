@@ -13,6 +13,8 @@ const errorHandler = require('./middlewares/errorHandler');
 const authRoutes = require('./routes/auth');
 const requestRoutes = require('./routes/request');
 const adminRoutes = require('./routes/admin');
+const metaRoutes = require('./routes/meta');
+const { versionProvider } = require('./utils/versionProvider');
 const logger = require('./utils/logger');
 
 
@@ -22,6 +24,7 @@ async function startServer() {
   store.init();
   await blacklistRepository.cleanupExpired();
   await initAdmin();
+  versionProvider.getVersion();
 
   const app = express();
 
@@ -32,6 +35,7 @@ async function startServer() {
   app.use('/api/auth', authRoutes);
   app.use('/api/requests', requestRoutes);
   app.use('/api/admin', adminRoutes);
+  app.use('/api/meta', metaRoutes);
 
   const publicDir = path.join(__dirname, '..', 'public');
   app.use(express.static(publicDir));

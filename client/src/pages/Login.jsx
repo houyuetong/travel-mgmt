@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../components/Toast';
 import { ERROR_CODES, ERROR_MESSAGES } from '../constants/errorCodes';
 import { ROLES } from '../constants/roles';
+import { useVersion } from '../hooks/useVersion';
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -12,6 +13,7 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
+  const version = useVersion();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -64,6 +66,7 @@ export default function Login() {
             {loading ? '登录中...' : '登录'}
           </button>
         </form>
+        {version && <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '12px', color: '#999' }}>{version}</div>}
       </div>
     </div>
   );
