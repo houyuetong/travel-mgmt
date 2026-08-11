@@ -1,11 +1,13 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useVersion } from '../hooks/useVersion';
 
 export default function Layout({ title, children, navItems }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const version = useVersion();
 
   const handleLogout = async () => {
     await logout();
@@ -29,6 +31,7 @@ export default function Layout({ title, children, navItems }) {
           ))}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          {version && <span style={{ fontSize: '12px', opacity: 0.8 }}>{version}</span>}
           <span style={{ fontSize: '14px' }}>{user?.name} ({user?.role})</span>
           <button onClick={handleLogout} style={{ padding: '4px 12px', border: '1px solid #fff', borderRadius: '4px', background: 'transparent', color: '#fff', cursor: 'pointer', fontSize: '13px' }}>登出</button>
         </div>
