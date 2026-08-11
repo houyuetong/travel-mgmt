@@ -1,0 +1,1 @@
+export const TRANSPORTS = ['火车', '飞机', '汽车', '高铁', '轮船', '其他'];
