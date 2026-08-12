@@ -16,7 +16,7 @@ function listUsers() {
   return userRepository.findAll().map(sanitize);
 }
 
-async function createUser(operator, { username, name, password }) {
+async function createUser(operator, { username, name, password, department }) {
   if (!username || !/^[A-Za-z0-9_]{3,20}$/.test(username)) {
     throw new BusinessError(errorCodes.VALIDATION_ERROR, '用户名需为3-20位字母、数字或下划线', 400);
   }
@@ -26,10 +26,15 @@ async function createUser(operator, { username, name, password }) {
   if (!password || password.length < 6) {
     throw new BusinessError(errorCodes.VALIDATION_ERROR, '密码长度至少6位', 400);
   }
+  if (department !== undefined && department !== null && department !== '') {
+    if (typeof department !== 'string' || department.length > 50) {
+      throw new BusinessError(errorCodes.VALIDATION_ERROR, '部门长度不能超过50字符', 400);
+    }
+  }
 
   const passwordHash = await bcryptUtil.hash(password);
   const now = new Date().toISOString();
-  const user = await userRepository.createIfUsernameFree({
+  const userObj = {
     username,
     name,
     passwordHash,
@@ -37,7 +42,11 @@ async function createUser(operator, { username, name, password }) {
     status: userStatus.ACTIVE,
     createdAt: now,
     updatedAt: now,
-  });
+  };
+  if (department !== undefined && department !== null && department !== '') {
+    userObj.department = department;
+  }
+  const user = await userRepository.createIfUsernameFree(userObj);
 
   await auditService.record({
     operatorUsername: operator.username,
@@ -45,13 +54,13 @@ async function createUser(operator, { username, name, password }) {
     action: 'CREATE_USER',
     targetType: 'USER',
     targetId: user.id,
-    detail: { username, name },
+    detail: { username, name, ...(user.department !== undefined ? { department: user.department } : {}) },
   });
 
   return sanitize(user);
 }
 
-async function updateUser(operator, id, { username, name, status }) {
+async function updateUser(operator, id, { username, name, status, department }) {
   const user = userRepository.findById(id);
   if (!user) {
     throw new BusinessError(errorCodes.USER_NOT_FOUND, '用户不存在', 404);
@@ -79,10 +88,21 @@ async function updateUser(operator, id, { username, name, status }) {
     }
     updates.status = status;
   }
+  if (department !== undefined) {
+    if (typeof department !== 'string' || department.length > 50) {
+      throw new BusinessError(errorCodes.VALIDATION_ERROR, '部门长度不能超过50字符', 400);
+    }
+    updates.department = department;
+  }
 
   const updated = await userRepository.updateIfUsernameFree(id, updates);
   if (!updated) {
     throw new BusinessError(errorCodes.USER_NOT_FOUND, '用户不存在', 404);
+  }
+
+  const auditDetail = { ...updates };
+  if (department !== undefined && department !== user.department) {
+    auditDetail.department = department;
   }
 
   await auditService.record({
@@ -91,7 +111,7 @@ async function updateUser(operator, id, { username, name, status }) {
     action: 'UPDATE_USER',
     targetType: 'USER',
     targetId: id,
-    detail: updates,
+    detail: auditDetail,
   });
 
   return sanitize(updated);

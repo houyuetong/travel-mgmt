@@ -17,6 +17,9 @@ const DISPLAY_MAP = {
   '高铁': { zh: '高铁', en: 'High-speed Rail' },
   '轮船': { zh: '轮船', en: 'Ship' },
   '其他': { zh: '其他', en: 'Other' },
+  '交通': { zh: '交通', en: 'Transportation' },
+  '住宿': { zh: '住宿', en: 'Accommodation' },
+  '餐饮': { zh: '餐饮', en: 'Meals' },
 };
 
 export function mapDisplay(value, lang = i18n.language) {

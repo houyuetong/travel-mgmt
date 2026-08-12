@@ -1,6 +1,7 @@
 const BusinessError = require('../errors/BusinessError');
 const errorCodes = require('../constants/errorCodes');
 const transports = require('../constants/transports');
+const expenseCategories = require('../constants/expenseCategories');
 
 function validateRequestFields(payload) {
   const { destination, startDate, endDate, purpose, transport, estimatedCost } = payload;
@@ -34,4 +35,33 @@ function validateRequestFields(payload) {
   }
 }
 
-module.exports = { validateRequestFields };
+function validateExpenseItems(payload) {
+  const items = payload && payload.expenseItems;
+  if (items === undefined || items === null || !Array.isArray(items) || items.length === 0) {
+    return;
+  }
+  if (items.length > 20) {
+    throw new BusinessError(errorCodes.VALIDATION_ERROR, '费用明细数量不能超过20条');
+  }
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (!item || typeof item !== 'object') {
+      throw new BusinessError(errorCodes.VALIDATION_ERROR, `第${i + 1}条费用明细格式非法`);
+    }
+    if (!expenseCategories.includes(item.category)) {
+      throw new BusinessError(errorCodes.VALIDATION_ERROR, `第${i + 1}条费用明细的类别取值非法`);
+    }
+    const amount = Number(item.amount);
+    if (item.amount === undefined || item.amount === null || isNaN(amount) || amount <= 0) {
+      throw new BusinessError(errorCodes.VALIDATION_ERROR, `第${i + 1}条费用明细的金额必须大于0`);
+    }
+    if (Math.round(amount * 100) !== amount * 100) {
+      throw new BusinessError(errorCodes.VALIDATION_ERROR, `第${i + 1}条费用明细的金额最多两位小数`);
+    }
+    if (item.description !== undefined && item.description !== null && item.description.length > 200) {
+      throw new BusinessError(errorCodes.VALIDATION_ERROR, `第${i + 1}条费用明细的说明长度不能超过200字符`);
+    }
+  }
+}
+
+module.exports = { validateRequestFields, validateExpenseItems };

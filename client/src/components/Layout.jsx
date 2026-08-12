@@ -1,6 +1,6 @@
-import React from 'react';
-import { Layout as AntLayout, Menu, Avatar, Button, Space, Dropdown, Tag } from 'antd';
-import { GlobalOutlined, LogoutOutlined, UserOutlined } from '@ant-design/icons';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Layout as AntLayout, Menu, Avatar, Button, Space, Dropdown, Tag, Badge } from 'antd';
+import { GlobalOutlined, LogoutOutlined, UserOutlined, BellOutlined } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -8,15 +8,18 @@ import { useVersion } from '../hooks/useVersion';
 import { ROLES } from '../constants/roles';
 import { changeLanguage } from '../i18n/index.js';
 import { displayText } from '../utils/displayMapping.js';
+import { getPendingCount } from '../api/stats.js';
 
 const { Sider, Header, Content } = AntLayout;
 
 const MENU_BY_ROLE = {
   [ROLES.EMPLOYEE]: [
+    { key: '/employee/dashboard', labelKey: 'layout:myStats' },
     { key: '/employee/requests', labelKey: 'layout:myRequests' },
     { key: '/employee/requests/new', labelKey: 'layout:newRequest' },
   ],
   [ROLES.ADMIN]: [
+    { key: '/admin/dashboard', labelKey: 'layout:dataDashboard' },
     { key: '/admin/requests', labelKey: 'layout:requestReview' },
     { key: '/admin/users', labelKey: 'layout:employeeManagement' },
   ],
@@ -37,12 +40,37 @@ export default function Layout({ title, children }) {
 
   const selectedKey = (() => {
     const p = location.pathname;
+    if (p.startsWith('/admin/dashboard')) return '/admin/dashboard';
     if (p.startsWith('/admin/requests')) return '/admin/requests';
     if (p.startsWith('/admin/users')) return '/admin/users';
+    if (p.startsWith('/employee/dashboard')) return '/employee/dashboard';
     if (p.startsWith('/employee/requests/new')) return '/employee/requests/new';
     if (p.startsWith('/employee/requests')) return '/employee/requests';
     return '';
   })();
+
+  const isAdmin = user?.role === ROLES.ADMIN;
+  const [pendingCount, setPendingCount] = useState(null);
+
+  const refreshPendingCount = useCallback(async () => {
+    if (!isAdmin) return;
+    try {
+      const res = await getPendingCount();
+      setPendingCount(res.data?.count ?? 0);
+    } catch (err) {
+      setPendingCount(null);
+    }
+  }, [isAdmin]);
+
+  useEffect(() => {
+    refreshPendingCount();
+  }, [refreshPendingCount, location.pathname]);
+
+  useEffect(() => {
+    const handler = () => refreshPendingCount();
+    window.addEventListener('pending-count-refresh', handler);
+    return () => window.removeEventListener('pending-count-refresh', handler);
+  }, [refreshPendingCount]);
 
   const handleLogout = async () => {
     await logout();
@@ -75,6 +103,11 @@ export default function Layout({ title, children }) {
             >
               <Button type="text" icon={<GlobalOutlined />}>{t('header:languageSwitch')}</Button>
             </Dropdown>
+            {isAdmin && pendingCount !== null && (
+              <Badge count={pendingCount} showZero size="small" overflowCount={999999}>
+                <Button type="text" icon={<BellOutlined />} onClick={() => navigate('/admin/requests')}>{t('layout:pendingCount')}</Button>
+              </Badge>
+            )}
             {version && <span style={{ fontSize: 12, color: '#999' }}>{version}</span>}
             <Space size="small">
               <Avatar size="small" icon={<UserOutlined />} />

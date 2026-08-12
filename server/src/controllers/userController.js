@@ -12,8 +12,8 @@ async function listUsers(req, res, next) {
 
 async function createUser(req, res, next) {
   try {
-    const { username, name, password } = req.body;
-    const user = await userService.createUser(req.user, { username, name, password });
+    const { username, name, password, department } = req.body;
+    const user = await userService.createUser(req.user, { username, name, password, department });
     res.json(success(user));
   } catch (err) {
     next(err);
@@ -22,8 +22,8 @@ async function createUser(req, res, next) {
 
 async function updateUser(req, res, next) {
   try {
-    const { username, name, status } = req.body;
-    const user = await userService.updateUser(req.user, req.params.id, { username, name, status });
+    const { username, name, status, department } = req.body;
+    const user = await userService.updateUser(req.user, req.params.id, { username, name, status, department });
     res.json(success(user));
   } catch (err) {
     next(err);

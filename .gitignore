@@ -1,4 +1,7 @@
 node_modules/
+.v10worktree/
+.v11worktree/
+.v12worktree/
 dist/
 server/data/
 server/server/

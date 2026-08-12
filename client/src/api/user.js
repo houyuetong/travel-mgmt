@@ -2,8 +2,8 @@ import apiClient from './client';
 
 export const listUsers = () => apiClient.get('/admin/users');
 
-export const createUser = (username, name, password) =>
-  apiClient.post('/admin/users', { username, name, password });
+export const createUser = (username, name, password, department) =>
+  apiClient.post('/admin/users', { username, name, password, department });
 
 export const updateUser = (id, data) =>
   apiClient.put(`/admin/users/${id}`, data);
