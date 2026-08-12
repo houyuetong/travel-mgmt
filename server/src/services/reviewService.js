@@ -5,6 +5,27 @@ const requestStatus = require('../constants/requestStatus');
 const BusinessError = require('../errors/BusinessError');
 const errorCodes = require('../constants/errorCodes');
 
+function getTotalCost(request) {
+  if (request.expenseItems && request.expenseItems.length > 0) {
+    const sum = request.expenseItems.reduce((acc, item) => acc + Number(item.amount || 0), 0);
+    return Math.round(sum * 100) / 100;
+  }
+  return request.estimatedCost;
+}
+
+function enrichRequest(request) {
+  const submitter = userRepository.findByUsername(request.submitterUsername);
+  const reviewer = request.reviewerUsername ? userRepository.findByUsername(request.reviewerUsername) : null;
+  return {
+    ...request,
+    submitterName: submitter ? submitter.name : request.submitterUsername,
+    totalCost: getTotalCost(request),
+    reviewerName: request.reviewerUsername
+      ? (reviewer ? reviewer.name : request.reviewerUsername)
+      : undefined,
+  };
+}
+
 function listAllRequests({ status, page = 1, pageSize = 100 } = {}) {
   let list = requestRepository.findAll();
   if (status && status !== '全部') {
@@ -13,12 +34,8 @@ function listAllRequests({ status, page = 1, pageSize = 100 } = {}) {
   list.sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
   const total = list.length;
   const startIdx = (page - 1) * pageSize;
-  const paged = list.slice(startIdx, startIdx + pageSize);
-  const enriched = paged.map(r => {
-    const submitter = userRepository.findByUsername(r.submitterUsername);
-    return { ...r, submitterName: submitter ? submitter.name : r.submitterUsername };
-  });
-  return { list: enriched, total, page: parseInt(page), pageSize: parseInt(pageSize) };
+  const paged = list.slice(startIdx, startIdx + pageSize).map(enrichRequest);
+  return { list: paged, total, page: parseInt(page), pageSize: parseInt(pageSize) };
 }
 
 function getRequestDetail(id) {
@@ -26,8 +43,7 @@ function getRequestDetail(id) {
   if (!request) {
     throw new BusinessError(errorCodes.REQUEST_NOT_FOUND, '申请不存在', 404);
   }
-  const submitter = userRepository.findByUsername(request.submitterUsername);
-  return { ...request, submitterName: submitter ? submitter.name : request.submitterUsername };
+  return enrichRequest(request);
 }
 
 async function approveRequest(reviewer, id, comment) {

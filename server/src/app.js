@@ -14,6 +14,8 @@ const authRoutes = require('./routes/auth');
 const requestRoutes = require('./routes/request');
 const adminRoutes = require('./routes/admin');
 const metaRoutes = require('./routes/meta');
+const statsRoutes = require('./routes/stats');
+const exportRoutes = require('./routes/export');
 const { versionProvider } = require('./utils/versionProvider');
 const logger = require('./utils/logger');
 
@@ -32,10 +34,12 @@ async function startServer() {
   app.use(express.json());
   app.use(requestLogger);
 
+  app.use('/api', exportRoutes);
   app.use('/api/auth', authRoutes);
   app.use('/api/requests', requestRoutes);
   app.use('/api/admin', adminRoutes);
   app.use('/api/meta', metaRoutes);
+  app.use('/api/stats', statsRoutes);
 
   const publicDir = path.join(__dirname, '..', 'public');
   app.use(express.static(publicDir));

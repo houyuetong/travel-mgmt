@@ -7,6 +7,8 @@ import StatusTag from '../../components/StatusTag';
 import Pagination from '../../components/Pagination';
 import { useToast } from '../../components/Toast';
 import { reviewApi } from '../../api/review';
+import { exportAdminRequests } from '../../api/export';
+import { downloadBlob } from '../../utils/download.js';
 import { STATUS_OPTIONS } from '../../constants/requestStatus';
 import { displayText, formatDate, formatDateTime } from '../../utils/displayMapping.js';
 
@@ -15,6 +17,7 @@ export default function AdminRequestList() {
   const [status, setStatus] = useState('全部');
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const navigate = useNavigate();
   const { t } = useTranslation();
   const toast = useToast();
@@ -32,6 +35,19 @@ export default function AdminRequestList() {
   };
 
   useEffect(() => { fetchData(); }, [status, page]);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const blob = await exportAdminRequests({ status });
+      downloadBlob(blob, `travel-requests-${new Date().toISOString().slice(0, 10)}.csv`);
+      toast.show(t('export:success'), 'success');
+    } catch (err) {
+      toast.show(t(`errors:${err.code}`) || err.message || t('export:failed'));
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const columns = [
     { title: t('table:columns.submitter'), dataIndex: 'submitterName', key: 'submitterName' },
@@ -59,6 +75,7 @@ export default function AdminRequestList() {
           onChange={v => { setStatus(v); setPage(1); }}
           options={STATUS_OPTIONS.map(s => ({ value: s, label: s === '全部' ? t('common:all') : displayText(s) }))}
         />
+        <Button onClick={handleExport} loading={exporting} style={{ marginLeft: 'auto' }}>{t('export:button')}</Button>
       </div>
 
       {loading ? (

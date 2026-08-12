@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Descriptions, Typography, Steps, Button, Input, App } from 'antd';
+import { Card, Descriptions, Typography, Steps, Button, Input, App, Table, Empty } from 'antd';
 import { useTranslation } from 'react-i18next';
 import Layout from '../../components/Layout';
 import StatusTag from '../../components/StatusTag';
+import ApprovalTimeline from '../../components/ApprovalTimeline';
 import { useToast } from '../../components/Toast';
 import { reviewApi } from '../../api/review';
 import { displayText, formatDate, formatDateTime, formatCurrency } from '../../utils/displayMapping.js';
@@ -36,6 +37,7 @@ export default function AdminRequestDetail() {
       message.success(t('review:approveSuccess'));
       setComment('');
       fetchDetail();
+      window.dispatchEvent(new Event('pending-count-refresh'));
     } catch (err) {
       toast.show(t(`errors:${err.code}`) || err.message || t('toast:fail.approve'));
     } finally {
@@ -54,6 +56,7 @@ export default function AdminRequestDetail() {
       message.success(t('review:rejectSuccess'));
       setComment('');
       fetchDetail();
+      window.dispatchEvent(new Event('pending-count-refresh'));
     } catch (err) {
       toast.show(t(`errors:${err.code}`) || err.message || t('toast:fail.reject'));
     } finally {
@@ -81,22 +84,39 @@ export default function AdminRequestDetail() {
           <Descriptions.Item label={t('table:columns.startDate')}>{formatDate(request.startDate)}</Descriptions.Item>
           <Descriptions.Item label={t('table:columns.endDate')}>{formatDate(request.endDate)}</Descriptions.Item>
           <Descriptions.Item label={t('table:columns.transport')}>{displayText(request.transport)}</Descriptions.Item>
-          <Descriptions.Item label={t('table:columns.estimatedCost')}>¥{formatCurrency(request.estimatedCost)}</Descriptions.Item>
+          <Descriptions.Item label={t('form:totalCost')}>¥{formatCurrency(request.totalCost ?? request.estimatedCost)}</Descriptions.Item>
           <Descriptions.Item label={t('table:columns.submittedAt')}>{formatDateTime(request.submittedAt)}</Descriptions.Item>
         </Descriptions>
+      </Card>
+      <Card title={t('expense:sectionTitle')} style={{ maxWidth: 600, marginBottom: 16 }}>
+        {Array.isArray(request.expenseItems) && request.expenseItems.length > 0 ? (
+          <Table
+            rowKey={(_, i) => i}
+            size="small"
+            pagination={false}
+            dataSource={request.expenseItems}
+            columns={[
+              { title: t('expense:category'), dataIndex: 'category', key: 'category', render: v => displayText(v) },
+              { title: t('expense:amount'), dataIndex: 'amount', key: 'amount', render: v => `¥${formatCurrency(v)}` },
+              { title: t('expense:description'), dataIndex: 'description', key: 'description', render: v => v || '-' },
+            ]}
+            summary={() => (
+              <Table.Summary.Row>
+                <Table.Summary.Cell index={0} colSpan={2}><strong>{t('expense:totalLabel')}</strong></Table.Summary.Cell>
+                <Table.Summary.Cell index={2}><strong>¥{formatCurrency(request.totalCost ?? request.estimatedCost)}</strong></Table.Summary.Cell>
+              </Table.Summary.Row>
+            )}
+          />
+        ) : (
+          <Empty description={t('expense:empty')} />
+        )}
       </Card>
       <Card title={t('detail:purposeSection')} style={{ maxWidth: 600, marginBottom: 16 }}>
         <p style={{ margin: 0 }}>{request.purpose}</p>
       </Card>
-      {request.reviewedAt && (
-        <Card title={t('detail:approvalStatus')} style={{ maxWidth: 600, marginBottom: 16 }}>
-          <Descriptions column={1} size="small">
-            <Descriptions.Item label={t('detail:reviewer')}>{request.reviewerUsername}</Descriptions.Item>
-            <Descriptions.Item label={t('detail:reviewedAt')}>{formatDateTime(request.reviewedAt)}</Descriptions.Item>
-            <Descriptions.Item label={t('detail:reviewComment')}>{request.reviewComment || t('detail:noComment')}</Descriptions.Item>
-          </Descriptions>
-        </Card>
-      )}
+      <Card title={t('timeline:sectionTitle')} style={{ maxWidth: 600, marginBottom: 16 }}>
+        <ApprovalTimeline request={request} />
+      </Card>
 
       {request.status === '待审核' && (
         <Card title={t('review:commentLabel')} style={{ maxWidth: 600, marginBottom: 16 }}>

@@ -1,13 +1,34 @@
 const requestRepository = require('../repositories/requestRepository');
-const { validateRequestFields } = require('../utils/validator');
+const userRepository = require('../repositories/userRepository');
+const { validateRequestFields, validateExpenseItems } = require('../utils/validator');
 const requestStatus = require('../constants/requestStatus');
 const BusinessError = require('../errors/BusinessError');
 const errorCodes = require('../constants/errorCodes');
 
+function getTotalCost(request) {
+  if (request.expenseItems && request.expenseItems.length > 0) {
+    const sum = request.expenseItems.reduce((acc, item) => acc + Number(item.amount || 0), 0);
+    return Math.round(sum * 100) / 100;
+  }
+  return request.estimatedCost;
+}
+
+function attachDerivedFields(request) {
+  const reviewer = request.reviewerUsername ? userRepository.findByUsername(request.reviewerUsername) : null;
+  return {
+    ...request,
+    totalCost: getTotalCost(request),
+    reviewerName: request.reviewerUsername
+      ? (reviewer ? reviewer.name : request.reviewerUsername)
+      : undefined,
+  };
+}
+
 async function createRequest(username, payload) {
   validateRequestFields(payload);
+  validateExpenseItems(payload);
   const now = new Date().toISOString();
-  const request = await requestRepository.create({
+  const requestObj = {
     submitterUsername: username,
     destination: payload.destination,
     startDate: payload.startDate,
@@ -19,7 +40,15 @@ async function createRequest(username, payload) {
     submittedAt: now,
     createdAt: now,
     updatedAt: now,
-  });
+  };
+  if (payload.expenseItems && payload.expenseItems.length > 0) {
+    requestObj.expenseItems = payload.expenseItems.map(item => ({
+      category: item.category,
+      amount: parseFloat(item.amount),
+      ...(item.description !== undefined && item.description !== null && item.description !== '' ? { description: item.description } : {}),
+    }));
+  }
+  const request = await requestRepository.create(requestObj);
   return request;
 }
 
@@ -31,7 +60,7 @@ function listMyRequests(username, { status, page = 1, pageSize = 100 } = {}) {
   list.sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
   const total = list.length;
   const startIdx = (page - 1) * pageSize;
-  const paged = list.slice(startIdx, startIdx + pageSize);
+  const paged = list.slice(startIdx, startIdx + pageSize).map(attachDerivedFields);
   return { list: paged, total, page: parseInt(page), pageSize: parseInt(pageSize) };
 }
 
@@ -43,7 +72,7 @@ function getMyRequest(username, id) {
   if (request.submitterUsername !== username) {
     throw new BusinessError(errorCodes.FORBIDDEN, '无权查看他人申请', 403);
   }
-  return request;
+  return attachDerivedFields(request);
 }
 
 async function withdrawRequest(username, id) {
@@ -61,8 +90,9 @@ async function resubmitRequest(username, id, payload) {
     throw new BusinessError(errorCodes.STATE_CONFLICT, '只能重新提交已拒绝的申请', 409);
   }
   validateRequestFields(payload);
+  validateExpenseItems(payload);
   const now = new Date().toISOString();
-  const newRequest = await requestRepository.create({
+  const newRequestObj = {
     submitterUsername: username,
     destination: payload.destination,
     startDate: payload.startDate,
@@ -75,8 +105,16 @@ async function resubmitRequest(username, id, payload) {
     resubmittedFrom: id,
     createdAt: now,
     updatedAt: now,
-  });
+  };
+  if (payload.expenseItems && payload.expenseItems.length > 0) {
+    newRequestObj.expenseItems = payload.expenseItems.map(item => ({
+      category: item.category,
+      amount: parseFloat(item.amount),
+      ...(item.description !== undefined && item.description !== null && item.description !== '' ? { description: item.description } : {}),
+    }));
+  }
+  const newRequest = await requestRepository.create(newRequestObj);
   return newRequest;
 }
 
-module.exports = { createRequest, listMyRequests, getMyRequest, withdrawRequest, resubmitRequest };
+module.exports = { createRequest, listMyRequests, getMyRequest, withdrawRequest, resubmitRequest, getTotalCost, attachDerivedFields };

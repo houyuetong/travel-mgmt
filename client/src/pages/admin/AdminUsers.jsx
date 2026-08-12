@@ -36,7 +36,7 @@ export default function AdminUsers() {
   const handleCreate = async () => {
     try {
       const values = await createForm.validateFields();
-      await userApi.createUser(values.username, values.name, values.password);
+      await userApi.createUser(values.username, values.name, values.password, values.department);
       toast.show(t('employeeManagement:createSuccess'), 'success');
       setShowCreate(false);
       createForm.resetFields();
@@ -98,6 +98,7 @@ export default function AdminUsers() {
   const columns = [
     { title: t('table:columns.username'), dataIndex: 'username', key: 'username' },
     { title: t('table:columns.name'), dataIndex: 'name', key: 'name' },
+    { title: t('table:columns.department'), dataIndex: 'department', key: 'department', render: v => v || t('dashboard:unassigned') },
     { title: t('table:columns.role'), dataIndex: 'role', key: 'role', render: v => displayText(v) },
     { title: t('table:columns.status'), dataIndex: 'status', key: 'status', render: v => displayText(v) },
     { title: t('table:columns.createdAt'), dataIndex: 'createdAt', key: 'createdAt', render: v => formatDateTime(v) },
@@ -107,7 +108,7 @@ export default function AdminUsers() {
       render: (_, u) => {
         if (u.role !== ROLES.EMPLOYEE) return null;
         const moreItems = [
-          { key: 'edit', label: t('table:actions.edit'), onClick: () => { setEditUser(u); editForm.setFieldsValue({ username: u.username, name: u.name, status: u.status }); } },
+          { key: 'edit', label: t('table:actions.edit'), onClick: () => { setEditUser(u); editForm.setFieldsValue({ username: u.username, name: u.name, status: u.status, department: u.department || '' }); } },
           { key: 'toggle', label: u.status === USER_STATUS.ACTIVE ? t('table:actions.disable') : t('table:actions.enable'), onClick: () => showToggleConfirm(u) },
           { key: 'reset', label: t('table:actions.resetPassword'), onClick: () => { setResetUser(u); resetForm.resetFields(); } },
         ];
@@ -125,7 +126,7 @@ export default function AdminUsers() {
       <div style={{ marginBottom: 16 }}>
         <Button type="primary" onClick={() => setShowCreate(true)}>{t('employeeManagement:createButton')}</Button>
       </div>
-      <Table rowKey="id" columns={columns} dataSource={users} />
+      <Table rowKey="id" columns={columns} dataSource={users} pagination={false} />
 
       <Modal
         title={t('employeeManagement:modalTitles.create')}
@@ -145,6 +146,9 @@ export default function AdminUsers() {
           </Form.Item>
           <Form.Item name="password" label={t('login:password')} rules={[{ required: true, message: t('employeeManagement:validations.passwordMinLength') }, { min: 6, message: t('employeeManagement:validations.passwordMinLength') }]}>
             <Input.Password placeholder={t('employeeManagement:placeholders.password')} />
+          </Form.Item>
+          <Form.Item name="department" label={t('form:department')}>
+            <Input maxLength={50} placeholder={t('form:departmentPlaceholder')} />
           </Form.Item>
         </Form>
       </Modal>
@@ -170,6 +174,9 @@ export default function AdminUsers() {
               { value: USER_STATUS.ACTIVE, label: displayText(USER_STATUS.ACTIVE) },
               { value: USER_STATUS.DISABLED, label: displayText(USER_STATUS.DISABLED) },
             ]} />
+          </Form.Item>
+          <Form.Item name="department" label={t('form:department')}>
+            <Input maxLength={50} placeholder={t('form:departmentPlaceholder')} />
           </Form.Item>
         </Form>
       </Modal>

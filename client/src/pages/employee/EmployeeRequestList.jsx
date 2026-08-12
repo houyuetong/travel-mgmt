@@ -8,6 +8,8 @@ import Pagination from '../../components/Pagination';
 
 import { useToast } from '../../components/Toast';
 import { requestApi } from '../../api/request';
+import { exportMyRequests } from '../../api/export';
+import { downloadBlob } from '../../utils/download.js';
 import { STATUS_OPTIONS } from '../../constants/requestStatus';
 import { displayText, formatDate, formatDateTime, formatCurrency } from '../../utils/displayMapping.js';
 
@@ -16,6 +18,7 @@ export default function EmployeeRequestList() {
   const [status, setStatus] = useState('全部');
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -35,6 +38,19 @@ export default function EmployeeRequestList() {
   };
 
   useEffect(() => { fetchData(); }, [status, page]);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const blob = await exportMyRequests({ status });
+      downloadBlob(blob, `travel-requests-${new Date().toISOString().slice(0, 10)}.csv`);
+      toast.show(t('export:success'), 'success');
+    } catch (err) {
+      toast.show(t(`errors:${err.code}`) || err.message || t('export:failed'));
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const handleWithdraw = async (id) => {
     try {
@@ -89,7 +105,8 @@ export default function EmployeeRequestList() {
           onChange={v => { setStatus(v); setPage(1); }}
           options={STATUS_OPTIONS.map(s => ({ value: s, label: s === '全部' ? t('common:all') : displayText(s) }))}
         />
-        <Button type="primary" style={{ marginLeft: 'auto' }} onClick={() => navigate('/employee/requests/new')}>{t('myRequests:createNew')}</Button>
+        <Button onClick={handleExport} loading={exporting} style={{ marginLeft: 'auto' }}>{t('export:button')}</Button>
+        <Button type="primary" onClick={() => navigate('/employee/requests/new')}>{t('myRequests:createNew')}</Button>
       </div>
 
       {loading ? (

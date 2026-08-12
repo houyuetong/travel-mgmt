@@ -1,6 +1,6 @@
 {
   "name": "travel-mgmt-server",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "企业差旅管理系统 V1 后端",
   "main": "src/app.js",
   "scripts": {

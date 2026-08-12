@@ -88,6 +88,9 @@ test.describe('V1.3 i18n 双语 E2E 测试', () => {
     await expect(page.locator('.ant-table')).toContainText('北京');
 
     const adminCtx = await loginAs(ADMIN.username, ADMIN.password);
+    const disUser = `dis_${Date.now()}`;
+    const disRes = await createEmployee(adminCtx, disUser, 'DisabledUser', 'pass123456');
+    await apiCall(adminCtx, 'patch', `/admin/users/${disRes.body.data.id}/status`, { status: '禁用' });
     await injectAuth(page, adminCtx, EN);
     await page.goto('/admin/users');
     await expect(page.locator('.ant-table')).toContainText('Administrator');
@@ -242,11 +245,11 @@ test.describe('V1.3 i18n 双语 E2E 测试', () => {
   test('13. 既有版本展示回归（en-US）', async ({ page }) => {
     await page.addInitScript((lang) => localStorage.setItem('i18nLanguage', lang), EN);
     await page.goto('/login');
-    await expect(page.locator('body')).toContainText('v1.3.0');
+    await expect(page.locator('body')).toContainText('v1.4.0');
 
     const ctx = await loginAs(ADMIN.username, ADMIN.password);
     await injectAuth(page, ctx, EN);
     await page.goto('/admin/users');
-    await expect(page.locator('body')).toContainText('v1.3.0');
+    await expect(page.locator('body')).toContainText('v1.4.0');
   });
 });
