@@ -37,6 +37,12 @@
 └── tests/           # E2E 测试
 ```
 
+## 一键启动（推荐）
+
+**Windows 用户双击根目录 `start.bat`**，脚本会自动检测并启动后端（端口 3001）并在浏览器打开 `http://localhost:3001`。前提：已执行过 `npm run install:all` 且 `server/.env` 已配置。
+
+> 注意：`start.bat` 启动的是**生产模式**（访问已构建好的 `server/public` 前端产物）。若修改了前端源码需先执行 `npm run build` 再访问。
+
 ## 开发模式启动
 
 1. 安装依赖：
